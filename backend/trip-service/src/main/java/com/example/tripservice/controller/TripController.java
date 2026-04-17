@@ -30,7 +30,7 @@ public class TripController {
         try {
             Trip createTrip = tripService.createTrip(tripDTO);
 
-            return new ResponseEntity<>(createTrip.getTripId(), HttpStatus.OK);
+            return new ResponseEntity<>(createTrip.getTripId(), HttpStatus.CREATED);
         } catch (Exception e) {
             return new ResponseEntity<>("Something went wrong!", HttpStatus.INTERNAL_SERVER_ERROR);
         }
