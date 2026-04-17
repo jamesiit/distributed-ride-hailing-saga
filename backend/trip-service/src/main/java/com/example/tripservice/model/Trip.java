@@ -1,6 +1,7 @@
 package com.example.tripservice.model;
 
 import jakarta.persistence.*;
+import org.hibernate.annotations.UuidGenerator;
 
 import java.util.UUID;
 
@@ -10,7 +11,7 @@ public class Trip {
 
     @Id
     @Column(name = "trip_id")
-    @GeneratedValue(strategy = GenerationType.AUTO)
+    @UuidGenerator(style = UuidGenerator.Style.RANDOM)
     private UUID tripId;
 
     @Column(name= "contact_number")
