@@ -13,11 +13,11 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 public class DispatchController {
 
-    private final DispatchService dispatchService;
+//    private final DispatchService dispatchService;
 
-    public DispatchController(DispatchService dispatchService) {
-        this.dispatchService = dispatchService;
-    }
+//    public DispatchController(DispatchService dispatchService) {
+//        this.dispatchService = dispatchService;
+//    }
 
     @GetMapping("/dispatch")
     public String sayHello() {
@@ -27,9 +27,12 @@ public class DispatchController {
     @PostMapping("/dispatch")
     public ResponseEntity<?> createDispatch(@RequestBody DispatchDTO dispatchDTO) {
         try {
-            Dispatch createDispatch = dispatchService.createDispatch(dispatchDTO);
+            // some valid logic
+            // Dispatch createDispatch = dispatchService.createDispatch(dispatchDTO);
+            // return new ResponseEntity<>(createDispatch.getDispatchId(), HttpStatus.CREATED);
 
-            return new ResponseEntity<>(createDispatch.getDispatchId(), HttpStatus.CREATED);
+            // simulate a business logic exception where drivers aren't found
+            return new ResponseEntity<>("No driver found!", HttpStatus.NOT_FOUND);
 
         } catch (Exception e) {
             return new ResponseEntity<>("Something went wrong!", HttpStatus.INTERNAL_SERVER_ERROR);
