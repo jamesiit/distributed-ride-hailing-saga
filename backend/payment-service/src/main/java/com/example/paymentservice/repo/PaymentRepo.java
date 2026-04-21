@@ -8,4 +8,5 @@ import java.util.UUID;
 
 @Repository
 public interface PaymentRepo extends JpaRepository<Payment, UUID> {
+    Payment findByTripId(UUID tripId);
 }

@@ -38,7 +38,7 @@ public class TripController {
 
     }
 
-    @PostMapping("trip/refund")
+    @PostMapping("trip/cancel")
     public ResponseEntity<?> refundTrip(@RequestBody RefundRequestDTO refundRequestDTO) {
 
         Trip refundTrip = tripService.processRefund(refundRequestDTO.getTripId());

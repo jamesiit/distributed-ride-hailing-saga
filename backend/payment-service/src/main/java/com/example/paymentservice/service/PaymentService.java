@@ -6,6 +6,8 @@ import com.example.paymentservice.model.PaymentStatus;
 import com.example.paymentservice.repo.PaymentRepo;
 import org.springframework.stereotype.Service;
 
+import java.util.UUID;
+
 @Service
 public class PaymentService {
     private final PaymentRepo paymentRepo;
@@ -26,6 +28,21 @@ public class PaymentService {
 
         return createPayment;
 
+
+    }
+
+    public Payment processRefund(UUID tripId) {
+
+        Payment checkTrip = paymentRepo.findByTripId(tripId);
+
+        if (checkTrip == null) {
+            return null;
+        }
+
+        checkTrip.setPaymentStatus(PaymentStatus.FAILED);
+        paymentRepo.save(checkTrip);
+
+        return checkTrip;
 
     }
 }
