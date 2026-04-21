@@ -1,5 +1,6 @@
 package com.example.tripservice.controller;
 
+import com.example.tripservice.dto.RefundRequestDTO;
 import com.example.tripservice.dto.TripDTO;
 import com.example.tripservice.model.Trip;
 import com.example.tripservice.service.TripService;
@@ -35,6 +36,18 @@ public class TripController {
             return new ResponseEntity<>("Something went wrong!", HttpStatus.INTERNAL_SERVER_ERROR);
         }
 
+    }
+
+    @PostMapping("trip/refund")
+    public ResponseEntity<?> refundTrip(@RequestBody RefundRequestDTO refundRequestDTO) {
+
+        Trip refundTrip = tripService.processRefund(refundRequestDTO.getTripId());
+
+        if (refundTrip == null) {
+            return new ResponseEntity<>("Trip does not exist!", HttpStatus.BAD_REQUEST);
+        }
+
+        return new ResponseEntity<>(refundTrip, HttpStatus.OK);
     }
 
 }

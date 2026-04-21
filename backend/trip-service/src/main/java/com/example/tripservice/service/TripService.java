@@ -6,6 +6,9 @@ import com.example.tripservice.model.TripStatus;
 import com.example.tripservice.repo.TripRepo;
 import org.springframework.stereotype.Service;
 
+import java.util.Optional;
+import java.util.UUID;
+
 @Service
 public class TripService {
 
@@ -26,6 +29,22 @@ public class TripService {
             tripRepo.save(createTrip);
 
             return createTrip;
+
+    }
+
+
+    public Trip processRefund(UUID tripId) {
+
+        Trip checkTrip = tripRepo.findById(tripId).orElse(null);
+
+        if (checkTrip == null) {
+            return null;
+        }
+
+        checkTrip.setTripStatus(TripStatus.FAILED);
+        tripRepo.save(checkTrip);
+
+        return checkTrip;
 
     }
 }
