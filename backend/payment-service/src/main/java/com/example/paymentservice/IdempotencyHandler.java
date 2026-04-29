@@ -24,7 +24,12 @@ public class IdempotencyHandler implements HandlerInterceptor {
 
         try {
             IdempotentKeyStatus status = idempotentService.processRequest(recIdempotentKey);
-            return true;
+
+            if (status == IdempotentKeyStatus.PROCEED) {
+                return true;
+            }
+
+
         } catch (Exception e) {
             System.out.println("Oh no! There's an Exception!");
             return false;
