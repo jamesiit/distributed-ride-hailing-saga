@@ -1,5 +1,7 @@
 package com.example.paymentservice;
 
+import com.example.paymentservice.model.IdempotentKeyStatus;
+import com.example.paymentservice.service.IdempotentService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.jspecify.annotations.Nullable;
@@ -10,10 +12,24 @@ import org.springframework.web.servlet.ModelAndView;
 @Component
 public class IdempotencyHandler implements HandlerInterceptor {
 
+    private IdempotentService idempotentService;
+
+    public IdempotencyHandler( IdempotentService idempotentService) {
+        this.idempotentService = idempotentService;
+    }
+
     @Override
     public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) throws Exception {
-        System.out.println("preHandle() called");
-        return HandlerInterceptor.super.preHandle(request, response, handler);
+        String recIdempotentKey = request.getHeader("Idempotency-Key");
+
+        try {
+            IdempotentKeyStatus status = idempotentService.processRequest(recIdempotentKey);
+            return true;
+        } catch (Exception e) {
+            System.out.println("Oh no! There's an Exception!");
+            return false;
+        }
+
     }
 
     @Override
