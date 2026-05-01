@@ -6,6 +6,7 @@ import com.example.paymentservice.repo.IdempotencyRepo;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 
+import java.util.Optional;
 import java.util.UUID;
 
 @Service
@@ -20,7 +21,7 @@ public class IdempotentService {
     public IdempotentKeyStatus processRequest(String recIdempotentKey) {
 
         UUID convId = UUID.fromString(recIdempotentKey);
-
+        
         try {
 
             idempotencyRepo.insert(convId, "PENDING");
@@ -29,18 +30,27 @@ public class IdempotentService {
 
         } catch (DataIntegrityViolationException e) {
 
-            IdempotentKey key = idempotencyRepo.findById(convId).orElse(null);
+            Optional<IdempotentKey> optionalKey = idempotencyRepo.findById(convId);
 
-            if (key.getIdempotentKeyStatus().equals("SUCCESS")) {
-
-                return IdempotentKeyStatus.CACHED;
-
-            }
-
-            else {
+            if (optionalKey.isEmpty()) {
                 return IdempotentKeyStatus.PROCESSING;
             }
+
+            IdempotentKey existingKey = optionalKey.get();
+
+            if (existingKey.getIdempotentKeyStatus() == IdempotentKeyStatus.CACHED) {
+                return IdempotentKeyStatus.CACHED;
+            } else {
+                return IdempotentKeyStatus.PROCESSING;
+            }
+
         }
 
     }
+
+    public IdempotentKey makeCache(String recIdempotentKey) {
+        UUID checkId = UUID.fromString(recIdempotentKey);
+        return idempotencyRepo.findById(checkId).orElse(null);
+    }
+
 }

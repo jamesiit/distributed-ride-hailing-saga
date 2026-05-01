@@ -1,9 +1,6 @@
 package com.example.paymentservice.model;
 
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.Id;
-import jakarta.persistence.Table;
+import jakarta.persistence.*;
 
 import java.util.UUID;
 
@@ -15,6 +12,7 @@ public class IdempotentKey {
     @Column(name = "idempotent_key")
     private UUID idempotentKey;
 
+    @Enumerated(EnumType.STRING)
     @Column(name = "idempotent_key_status")
     private IdempotentKeyStatus idempotentKeyStatus;
 

@@ -6,6 +6,7 @@ import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.UUID;
 
@@ -13,6 +14,7 @@ import java.util.UUID;
 public interface IdempotencyRepo extends JpaRepository<IdempotentKey, UUID> {
 
     @Modifying
-    @Query(value = "insert into idempotent_key_table (idempotentKey, idempotentKeyStatus) values (:id, :status)", nativeQuery = true)
+    @Transactional
+    @Query(value = "insert into idempotent_key_table (idempotent_key, idempotent_key_status) values (cast(:id as uuid), :status)", nativeQuery = true)
     void insert(@Param("id") UUID recIdempotentKey, @Param("status") String pending);
 }
