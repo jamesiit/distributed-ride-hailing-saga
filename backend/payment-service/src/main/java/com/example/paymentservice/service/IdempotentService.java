@@ -38,7 +38,7 @@ public class IdempotentService {
 
             IdempotentKey existingKey = optionalKey.get();
 
-            if (existingKey.getIdempotentKeyStatus() == IdempotentKeyStatus.CACHED) {
+            if (existingKey.getIdempotentKeyStatus() == IdempotentKeyStatus.SUCCESS) {
                 return IdempotentKeyStatus.CACHED;
             } else {
                 return IdempotentKeyStatus.PROCESSING;
