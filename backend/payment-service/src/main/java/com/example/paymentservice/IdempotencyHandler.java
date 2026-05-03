@@ -11,6 +11,7 @@ import org.springframework.web.servlet.HandlerInterceptor;
 import org.springframework.web.servlet.ModelAndView;
 
 import java.io.PrintWriter;
+import java.util.UUID;
 
 @Component
 public class IdempotencyHandler implements HandlerInterceptor {
@@ -84,6 +85,26 @@ public class IdempotencyHandler implements HandlerInterceptor {
                 return false;
             }
 
+            if (status == IdempotentKeyStatus.PROCESSING) {
+                response.setStatus(HttpServletResponse.SC_CONFLICT);
+                response.setContentType("application/json");
+                response.setCharacterEncoding("UTF-8");
+
+                PrintWriter writer = response.getWriter();
+
+                String processState = """
+                            {
+                                "state": "Processing",
+                                "message": "Key is being processed!"
+                            }
+                            """;
+
+                writer.write(processState);
+                writer.flush();
+
+                return false;
+            }
+
 
         } catch (Exception e) {
 
@@ -117,7 +138,14 @@ public class IdempotencyHandler implements HandlerInterceptor {
 
     @Override
     public void afterCompletion(HttpServletRequest request, HttpServletResponse response, Object handler, @Nullable Exception ex) throws Exception {
-        System.out.println("afterCompletion() called");
-        HandlerInterceptor.super.afterCompletion(request, response, handler, ex);
+
+            String responseKey = request.getHeader("Idempotency-Key");
+
+            UUID convKey = UUID.fromString(responseKey);
+
+            if (response.getStatus() == HttpServletResponse.SC_CREATED) {
+                idempotentService.updateCreatedStatus(convKey);
+            }
+
     }
 }

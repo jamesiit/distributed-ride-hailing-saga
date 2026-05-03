@@ -53,4 +53,18 @@ public class IdempotentService {
         return idempotencyRepo.findById(checkId).orElse(null);
     }
 
+    public void updateCreatedStatus(UUID convKey) {
+
+        Optional<IdempotentKey> checkedKey = idempotencyRepo.findById(convKey);
+
+        if (checkedKey.isEmpty()) {
+            System.out.println("its empty");
+        }
+
+        if (checkedKey.isPresent()) {
+            checkedKey.get().setIdempotentKeyStatus(IdempotentKeyStatus.SUCCESS);
+            idempotencyRepo.save(checkedKey.get());
+        }
+
+    }
 }
