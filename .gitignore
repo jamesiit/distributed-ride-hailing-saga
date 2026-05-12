@@ -24,4 +24,6 @@ hs_err_pid*
 replay_pid*
 
 # other files / folders
-backend/.idea
+backend/.idea/
+performance-testing/.idea/
+.idea
