@@ -1,5 +1,6 @@
 package com.example.tripservice.controller;
 
+import com.example.tripservice.dto.CompleteTripDTO;
 import com.example.tripservice.dto.RefundRequestDTO;
 import com.example.tripservice.dto.TripDTO;
 import com.example.tripservice.model.Trip;
@@ -48,6 +49,19 @@ public class TripController {
         }
 
         return new ResponseEntity<>(refundTrip, HttpStatus.OK);
+    }
+
+    @PostMapping("/trip/complete")
+    public ResponseEntity<?> completeTrip(@RequestBody CompleteTripDTO completeTripDTO) {
+
+        Trip completeTrip = tripService.completeTrip(completeTripDTO.getTripId());
+
+        if (completeTrip == null) {
+            return new ResponseEntity<>("Trip does not exist!", HttpStatus.BAD_REQUEST);
+        }
+
+        return new ResponseEntity<>(completeTrip, HttpStatus.OK);
+
     }
 
 }

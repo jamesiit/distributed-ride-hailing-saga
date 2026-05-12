@@ -47,4 +47,19 @@ public class TripService {
         return checkTrip;
 
     }
+
+    public Trip completeTrip(UUID tripId) {
+
+        Trip checkTrip = tripRepo.findById(tripId).orElse(null);
+
+        if (checkTrip == null) {
+            return null;
+        }
+
+        checkTrip.setTripStatus(TripStatus.COMPLETED);
+        tripRepo.save(checkTrip);
+
+        return checkTrip;
+
+    }
 }
