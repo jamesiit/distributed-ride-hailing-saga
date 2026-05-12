@@ -68,7 +68,7 @@ public class IdempotencyHandler implements HandlerInterceptor {
                 response.setContentType("application/json");
                 response.setCharacterEncoding("UTF-8");
 
-                String convCache = cachedKey.toString();
+                String convCache = cachedKey.getIdempotentKey().toString();
 
                 PrintWriter writer = response.getWriter();
 
@@ -145,6 +145,10 @@ public class IdempotencyHandler implements HandlerInterceptor {
 
             if (response.getStatus() == HttpServletResponse.SC_CREATED) {
                 idempotentService.updateCreatedStatus(convKey);
+            }
+
+            else if (response.getStatus() == HttpServletResponse.SC_INTERNAL_SERVER_ERROR || ex != null) {
+                idempotentService.deleteKey(convKey);
             }
 
     }

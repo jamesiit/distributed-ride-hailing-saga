@@ -17,7 +17,7 @@ public class PaymentController {
         this.paymentService = paymentService;
     }
 
-    @GetMapping("/payment")
+    @GetMapping("/test/payment")
     public String sayHello() {
         return "Hi";
     }

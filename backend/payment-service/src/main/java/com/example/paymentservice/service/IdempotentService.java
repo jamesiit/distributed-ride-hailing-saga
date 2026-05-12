@@ -67,4 +67,18 @@ public class IdempotentService {
         }
 
     }
+
+    public void deleteKey(UUID delKey) {
+
+        Optional<IdempotentKey> checkedKey = idempotencyRepo.findById(delKey);
+
+        if (checkedKey.isEmpty()) {
+            System.out.println("Could not find key!");
+        }
+
+        if (checkedKey.isPresent()) {
+           idempotencyRepo.deleteById(checkedKey.get().getIdempotentKey());
+        }
+
+    }
 }

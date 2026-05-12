@@ -25,10 +25,7 @@ public class PaymentService {
         createPayment.setPaymentStatus(PaymentStatus.SUCCESS);
 
         paymentRepo.save(createPayment);
-
         return createPayment;
-
-
     }
 
     public Payment processRefund(UUID tripId) {
@@ -39,7 +36,7 @@ public class PaymentService {
             return null;
         }
 
-        checkTrip.setPaymentStatus(PaymentStatus.FAILED);
+        checkTrip.setPaymentStatus(PaymentStatus.REFUNDED);
         paymentRepo.save(checkTrip);
 
         return checkTrip;
