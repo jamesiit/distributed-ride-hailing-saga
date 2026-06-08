@@ -1,7 +1,9 @@
 package com.example.dispatchservice.model;
 
 import jakarta.persistence.*;
+import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.annotations.UuidGenerator;
+import org.hibernate.type.SqlTypes;
 
 import java.util.UUID;
 
@@ -11,9 +13,11 @@ public class Dispatch {
 
     @Id
     @UuidGenerator(style = UuidGenerator.Style.RANDOM)
+    @JdbcTypeCode(SqlTypes.VARCHAR)
     @Column(name = "dispatch_id")
     private UUID dispatchId;
 
+    @JdbcTypeCode(SqlTypes.VARCHAR)
     @Column(name = "trip_id")
     private UUID tripId;
 
