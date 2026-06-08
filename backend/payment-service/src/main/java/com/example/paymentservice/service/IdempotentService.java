@@ -24,7 +24,7 @@ public class IdempotentService {
         
         try {
 
-            idempotencyRepo.insert(convId, "PENDING");
+            idempotencyRepo.insert(convId.toString(), "PENDING");
 
             return IdempotentKeyStatus.PROCEED;
 

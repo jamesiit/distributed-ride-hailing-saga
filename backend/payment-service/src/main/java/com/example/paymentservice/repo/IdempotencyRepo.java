@@ -15,6 +15,6 @@ public interface IdempotencyRepo extends JpaRepository<IdempotentKey, UUID> {
 
     @Modifying
     @Transactional
-    @Query(value = "insert into idempotent_key_table (idempotent_key, idempotent_key_status) values (cast(:id as uuid), :status)", nativeQuery = true)
-    void insert(@Param("id") UUID recIdempotentKey, @Param("status") String pending);
+    @Query(value = "insert into idempotent_key_table (idempotent_key, idempotent_key_status) values (:id, :status)", nativeQuery = true)
+    void insert(@Param("id") String recIdempotentKey, @Param("status") String pending);
 }
