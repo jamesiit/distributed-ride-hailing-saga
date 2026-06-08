@@ -1,7 +1,9 @@
 package com.example.tripservice.model;
 
 import jakarta.persistence.*;
+import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.annotations.UuidGenerator;
+import org.hibernate.type.SqlTypes;
 
 import java.util.UUID;
 
@@ -12,6 +14,7 @@ public class Trip {
     @Id
     @Column(name = "trip_id")
     @UuidGenerator(style = UuidGenerator.Style.RANDOM)
+    @JdbcTypeCode(SqlTypes.VARCHAR)
     private UUID tripId;
 
     @Column(name= "contact_number")
