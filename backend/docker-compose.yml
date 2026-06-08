@@ -1,0 +1,102 @@
+services:
+  dispatch-service:
+    build: ./dispatch-service
+    ports:
+      - "8081:8081"
+    environment:
+      - SPRING_DATASOURCE_URL=jdbc:mysql://dispatch_db:3306/dispatch_service?allowPublicKeyRetrieval=true&useSSL=false
+      - SPRING_DATASOURCE_USERNAME=${DATABASE_USERNAME}
+      - SPRING_DATASOURCE_PASSWORD=${DATABASE_PASSWORD}
+    networks:
+      - saga-network
+    depends_on:
+      dispatch_db:
+        condition: service_healthy
+
+  dispatch_db:
+    image: mysql:8.4.0
+    environment:
+      MYSQL_ROOT_PASSWORD: "${DATABASE_PASSWORD}"
+      MYSQL_DATABASE: dispatch_service
+    ports:
+      - "3307:3306"
+    networks:
+      - saga-network
+    volumes:
+      - dispatch-data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${DATABASE_PASSWORD}"]
+      timeout: 5s
+      retries: 10
+      interval: 5s
+
+  trip-service:
+    build: ./trip-service
+    ports:
+      - "8083:8083"
+    environment:
+      - SPRING_DATASOURCE_URL=jdbc:mysql://trip_db:3306/trip_service?allowPublicKeyRetrieval=true&useSSL=false
+      - SPRING_DATASOURCE_USERNAME=${DATABASE_USERNAME}
+      - SPRING_DATASOURCE_PASSWORD=${DATABASE_PASSWORD}
+    networks:
+      - saga-network
+    depends_on:
+      trip_db:
+        condition: service_healthy
+
+  trip_db:
+    image: mysql:8.4.0
+    environment:
+      MYSQL_ROOT_PASSWORD: "${DATABASE_PASSWORD}"
+      MYSQL_DATABASE: trip_service
+    ports:
+      - "3308:3306"
+    networks:
+      - saga-network
+    volumes:
+      - trip-data:/var/lib/mysql
+    healthcheck:
+      test: [ "CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${DATABASE_PASSWORD}" ]
+      timeout: 5s
+      retries: 10
+      interval: 5s
+
+  payment-service:
+    build: ./payment-service
+    ports:
+      - "8082:8082"
+    environment:
+      - SPRING_DATASOURCE_URL=jdbc:mysql://payment_db:3306/payment_service?allowPublicKeyRetrieval=true&useSSL=false
+      - SPRING_DATASOURCE_USERNAME=${DATABASE_USERNAME}
+      - SPRING_DATASOURCE_PASSWORD=${DATABASE_PASSWORD}
+    networks:
+      - saga-network
+    depends_on:
+      payment_db:
+        condition: service_healthy
+
+  payment_db:
+    image: mysql:8.4.0
+    environment:
+      MYSQL_ROOT_PASSWORD: "${DATABASE_PASSWORD}"
+      MYSQL_DATABASE: payment_service
+    ports:
+      - "3309:3306"
+    networks:
+      - saga-network
+    volumes:
+      - payment-data:/var/lib/mysql
+    healthcheck:
+      test: [ "CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${DATABASE_PASSWORD}" ]
+      timeout: 5s
+      retries: 10
+      interval: 5s
+
+networks:
+  saga-network:
+    driver: bridge
+
+volumes:
+  dispatch-data:
+  trip-data:
+  payment-data:

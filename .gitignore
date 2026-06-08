@@ -27,3 +27,4 @@ replay_pid*
 backend/.idea/
 performance-testing/.idea/
 .idea
+backend/.env
