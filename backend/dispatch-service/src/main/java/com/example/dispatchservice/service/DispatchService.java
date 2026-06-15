@@ -16,15 +16,20 @@ public class DispatchService {
 
     public Dispatch createDispatch(DispatchDTO dispatchDTO) {
 
+        if (dispatchDTO.getPickupLocation().equals("FAILOVER_TEST")) {
+            throw new IllegalStateException("FAILOVER TEST: No drivers found!");
+        }
+
         Dispatch createDispatch = new Dispatch();
 
         createDispatch.setTripId(dispatchDTO.getTripId());
         createDispatch.setCabDriver(dispatchDTO.getCabDriver());
         createDispatch.setCabNo(dispatchDTO.getCabNo());
         createDispatch.setDispatchStatus(DispatchStatus.ASSIGNED);
+        createDispatch.setPickupLocation(dispatchDTO.getPickupLocation());
 
         dispatchRepo.save(createDispatch);
-
+        
         return createDispatch;
 
     }

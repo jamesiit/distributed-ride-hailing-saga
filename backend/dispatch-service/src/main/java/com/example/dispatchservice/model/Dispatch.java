@@ -1,7 +1,9 @@
 package com.example.dispatchservice.model;
 
 import jakarta.persistence.*;
+import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.annotations.UuidGenerator;
+import org.hibernate.type.SqlTypes;
 
 import java.util.UUID;
 
@@ -11,9 +13,11 @@ public class Dispatch {
 
     @Id
     @UuidGenerator(style = UuidGenerator.Style.RANDOM)
+    @JdbcTypeCode(SqlTypes.VARCHAR)
     @Column(name = "dispatch_id")
     private UUID dispatchId;
 
+    @JdbcTypeCode(SqlTypes.VARCHAR)
     @Column(name = "trip_id")
     private UUID tripId;
 
@@ -27,12 +31,16 @@ public class Dispatch {
     @Column(name = "dispatch_status")
     private DispatchStatus dispatchStatus;
 
-    public Dispatch(UUID dispatchId, UUID tripId, String cabNo, String cabDriver, DispatchStatus dispatchStatus) {
+    @Column(name="pickup_location")
+    private String pickupLocation;
+
+    public Dispatch(UUID dispatchId, UUID tripId, String cabNo, String cabDriver, DispatchStatus dispatchStatus, String pickupLocation) {
         this.dispatchId = dispatchId;
         this.tripId = tripId;
         this.cabNo = cabNo;
         this.cabDriver = cabDriver;
         this.dispatchStatus = dispatchStatus;
+        this.pickupLocation = pickupLocation;
     }
 
     public UUID getDispatchId() {
@@ -73,6 +81,14 @@ public class Dispatch {
 
     public void setDispatchStatus(DispatchStatus dispatchStatus) {
         this.dispatchStatus = dispatchStatus;
+    }
+
+    public String getPickupLocation() {
+        return pickupLocation;
+    }
+
+    public void setPickupLocation(String pickupLocation) {
+        this.pickupLocation = pickupLocation;
     }
 
     public Dispatch() {

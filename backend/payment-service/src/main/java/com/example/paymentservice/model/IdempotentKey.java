@@ -1,6 +1,8 @@
 package com.example.paymentservice.model;
 
 import jakarta.persistence.*;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 import java.util.UUID;
 
@@ -10,6 +12,7 @@ public class IdempotentKey {
 
     @Id
     @Column(name = "idempotent_key")
+    @JdbcTypeCode(SqlTypes.VARCHAR)
     private UUID idempotentKey;
 
     @Enumerated(EnumType.STRING)

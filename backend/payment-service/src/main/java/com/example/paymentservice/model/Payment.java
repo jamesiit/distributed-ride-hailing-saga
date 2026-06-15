@@ -1,7 +1,9 @@
 package com.example.paymentservice.model;
 
 import jakarta.persistence.*;
+import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.annotations.UuidGenerator;
+import org.hibernate.type.SqlTypes;
 
 import java.util.UUID;
 
@@ -11,10 +13,12 @@ public class Payment {
 
     @Id
     @UuidGenerator( style = UuidGenerator.Style.RANDOM)
+    @JdbcTypeCode(SqlTypes.VARCHAR)
     @Column(name = "payment_id")
     private UUID paymentId;
 
     @Column(name = "trip_id")
+    @JdbcTypeCode(SqlTypes.VARCHAR)
     private UUID tripId;
 
     @Column(name = "payment_amount")
