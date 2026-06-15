@@ -10,10 +10,13 @@ public class DispatchDTO {
 
     private String cabDriver;
 
-    public DispatchDTO(UUID tripId, String cabNo, String cabDriver) {
+    private String pickupLocation;
+
+    public DispatchDTO(UUID tripId, String cabNo, String cabDriver, String pickupLocation) {
         this.tripId = tripId;
         this.cabNo = cabNo;
         this.cabDriver = cabDriver;
+        this.pickupLocation = pickupLocation;
     }
 
     public UUID getTripId() {
@@ -38,5 +41,13 @@ public class DispatchDTO {
 
     public void setCabDriver(String cabDriver) {
         this.cabDriver = cabDriver;
+    }
+
+    public String getPickupLocation() {
+        return pickupLocation;
+    }
+
+    public void setPickupLocation(String pickupLocation) {
+        this.pickupLocation = pickupLocation;
     }
 }

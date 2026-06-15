@@ -31,6 +31,8 @@ public class DispatchController {
             Dispatch createDispatch = dispatchService.createDispatch(dispatchDTO);
             return new ResponseEntity<>(createDispatch.getDispatchId(), HttpStatus.CREATED);
 
+        } catch (IllegalStateException e) {
+            return new ResponseEntity<>(e.getMessage(), HttpStatus.SERVICE_UNAVAILABLE);
         } catch (Exception e) {
             return new ResponseEntity<>("Something went wrong!", HttpStatus.INTERNAL_SERVER_ERROR);
         }

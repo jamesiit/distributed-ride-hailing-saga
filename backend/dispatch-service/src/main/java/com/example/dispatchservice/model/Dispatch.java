@@ -31,12 +31,16 @@ public class Dispatch {
     @Column(name = "dispatch_status")
     private DispatchStatus dispatchStatus;
 
-    public Dispatch(UUID dispatchId, UUID tripId, String cabNo, String cabDriver, DispatchStatus dispatchStatus) {
+    @Column(name="pickup_location")
+    private String pickupLocation;
+
+    public Dispatch(UUID dispatchId, UUID tripId, String cabNo, String cabDriver, DispatchStatus dispatchStatus, String pickupLocation) {
         this.dispatchId = dispatchId;
         this.tripId = tripId;
         this.cabNo = cabNo;
         this.cabDriver = cabDriver;
         this.dispatchStatus = dispatchStatus;
+        this.pickupLocation = pickupLocation;
     }
 
     public UUID getDispatchId() {
@@ -77,6 +81,14 @@ public class Dispatch {
 
     public void setDispatchStatus(DispatchStatus dispatchStatus) {
         this.dispatchStatus = dispatchStatus;
+    }
+
+    public String getPickupLocation() {
+        return pickupLocation;
+    }
+
+    public void setPickupLocation(String pickupLocation) {
+        this.pickupLocation = pickupLocation;
     }
 
     public Dispatch() {
