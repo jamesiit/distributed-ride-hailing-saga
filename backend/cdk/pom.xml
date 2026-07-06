@@ -9,7 +9,7 @@
 
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <cdk.version>[2.260.0,3.0.0)</cdk.version>
+        <cdk.version>2.259.0</cdk.version>
         <constructs.version>[10.5.0,11.0.0)</constructs.version>
         <junit.version>5.7.1</junit.version>
     </properties>
@@ -28,7 +28,7 @@
             <plugin>
                 <groupId>org.codehaus.mojo</groupId>
                 <artifactId>exec-maven-plugin</artifactId>
-                <version>3.1.0</version>
+                <version>3.2.0</version>
                 <configuration>
                     <mainClass>com.myorg.CdkApp</mainClass>
                 </configuration>
@@ -41,7 +41,7 @@
         <dependency>
             <groupId>software.amazon.awscdk</groupId>
             <artifactId>aws-cdk-lib</artifactId>
-            <version>${cdk.version}</version>
+            <version> ${cdk.version} </version>
         </dependency>
 
         <dependency>
