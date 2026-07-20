@@ -5,6 +5,8 @@ import software.amazon.awscdk.StackProps;
 import software.amazon.awscdk.services.iam.ManagedPolicy;
 import software.amazon.awscdk.services.iam.Role;
 import software.amazon.awscdk.services.iam.ServicePrincipal;
+import software.amazon.awscdk.services.ssm.IStringParameter;
+import software.amazon.awscdk.services.ssm.StringParameter;
 import software.constructs.Construct;
 
 public class ComputeStack extends Stack {
@@ -21,9 +23,19 @@ public class ComputeStack extends Stack {
                 .assumedBy(new ServicePrincipal("ecs-tasks.amazonaws.com"))
                 .build();
 
+        // add the policy to Agent - Pull images from ECR & push logs to CloudWatch
         taskExecutionRole.addManagedPolicy(
                 ManagedPolicy.fromAwsManagedPolicyName("service-role/AmazonECSTaskExecutionRolePolicy")
         );
+
+        // add the policy to Agent - Read the database password from SSM
+        IStringParameter dbPassword = StringParameter.fromStringParameterName(
+                this,
+                "SagaDbPassword",
+                "/saga/DATABASE_PASSWORD"
+        );
+
+        dbPassword.grantRead(taskExecutionRole);
 
     }
 }
