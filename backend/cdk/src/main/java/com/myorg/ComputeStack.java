@@ -2,6 +2,7 @@ package com.myorg;
 
 import software.amazon.awscdk.Stack;
 import software.amazon.awscdk.StackProps;
+import software.amazon.awscdk.services.iam.ManagedPolicy;
 import software.amazon.awscdk.services.iam.Role;
 import software.amazon.awscdk.services.iam.ServicePrincipal;
 import software.constructs.Construct;
@@ -19,6 +20,10 @@ public class ComputeStack extends Stack {
         Role taskExecutionRole = Role.Builder.create(this, "SagaTaskExecutionRole")
                 .assumedBy(new ServicePrincipal("ecs-tasks.amazonaws.com"))
                 .build();
+
+        taskExecutionRole.addManagedPolicy(
+                ManagedPolicy.fromAwsManagedPolicyName("service-role/AmazonECSTaskExecutionRolePolicy")
+        );
 
     }
 }

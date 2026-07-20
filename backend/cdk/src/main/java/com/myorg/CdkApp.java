@@ -21,6 +21,10 @@ public class CdkApp {
 
                 .build());
 
+        new ComputeStack(app, "ComputeStack", StackProps.builder()
+                .build()
+        );
+
         app.synth();
     }
 }
