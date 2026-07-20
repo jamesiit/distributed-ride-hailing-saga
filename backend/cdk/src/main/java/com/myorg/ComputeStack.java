@@ -37,5 +37,15 @@ public class ComputeStack extends Stack {
 
         dbPassword.grantRead(taskExecutionRole);
 
+        // add the policy to Agent - Read the database username from SSM
+        IStringParameter dbUsername = StringParameter.fromStringParameterName(
+                this,
+                "SagaDbUsername",
+                "/saga/DATABASE_USERNAME"
+        );
+
+        dbUsername.grantRead(taskExecutionRole);
+
+
     }
 }
