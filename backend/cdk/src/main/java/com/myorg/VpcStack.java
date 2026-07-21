@@ -11,6 +11,9 @@ import software.amazon.awscdk.StackProps;
 import java.util.Arrays;
 
 public class VpcStack extends Stack {
+
+    private Vpc sagaVpc;
+
     public VpcStack(final Construct scope, final String id) {
         this(scope, id, null);
     }
@@ -20,7 +23,7 @@ public class VpcStack extends Stack {
 
         // The code that defines your stack goes here
 
-        Vpc vpc = Vpc.Builder.create(this, "SagaVPC")
+        this.sagaVpc = Vpc.Builder.create(this, "SagaVPC")
                 .ipAddresses(IpAddresses.cidr("10.0.0.0/16"))
                 .maxAzs(1)
                 .natGateways(1)
@@ -39,7 +42,10 @@ public class VpcStack extends Stack {
                                 .build()
                 ))
                 .build();
-
-
     }
+
+    public Vpc getSagaVpc() {
+        return this.sagaVpc;
+    }
+
 }

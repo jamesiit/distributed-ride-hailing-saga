@@ -2,6 +2,9 @@ package com.myorg;
 
 import software.amazon.awscdk.Stack;
 import software.amazon.awscdk.StackProps;
+import software.amazon.awscdk.services.ec2.Vpc;
+import software.amazon.awscdk.services.ecs.CloudMapNamespaceOptions;
+import software.amazon.awscdk.services.ecs.Cluster;
 import software.amazon.awscdk.services.iam.ManagedPolicy;
 import software.amazon.awscdk.services.iam.Role;
 import software.amazon.awscdk.services.iam.ServicePrincipal;
@@ -11,12 +14,19 @@ import software.constructs.Construct;
 
 public class ComputeStack extends Stack {
 
-    public ComputeStack(final Construct scope, final String id) {
-        this(scope, id, null);
-    }
-
-    public ComputeStack(final Construct scope, final String id, final StackProps props) {
+    public ComputeStack(final Construct scope, final String id, final Vpc vpc, final StackProps props) {
         super(scope, id, props);
+
+        // creating the ecs cluster
+        Cluster ecsCluster = Cluster.Builder.create(this, "SagaCluster")
+                .vpc(vpc)
+                .clusterName("SagaRideHailingCluster")
+                .build();
+
+        // initializing CloudMap to be attached to the cluster
+        ecsCluster.addDefaultCloudMapNamespace(CloudMapNamespaceOptions.builder()
+                .name("saga.local")
+                .build());
 
         // create a task execution role so that Fargate has permission to go to ECR, pull down the image and load it into a container
         Role taskExecutionRole = Role.Builder.create(this, "SagaTaskExecutionRole")
