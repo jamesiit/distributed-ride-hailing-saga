@@ -3,14 +3,16 @@ package com.myorg;
 import software.amazon.awscdk.Stack;
 import software.amazon.awscdk.StackProps;
 import software.amazon.awscdk.services.ec2.Vpc;
-import software.amazon.awscdk.services.ecs.CloudMapNamespaceOptions;
-import software.amazon.awscdk.services.ecs.Cluster;
+import software.amazon.awscdk.services.ecs.*;
 import software.amazon.awscdk.services.iam.ManagedPolicy;
 import software.amazon.awscdk.services.iam.Role;
 import software.amazon.awscdk.services.iam.ServicePrincipal;
 import software.amazon.awscdk.services.ssm.IStringParameter;
 import software.amazon.awscdk.services.ssm.StringParameter;
 import software.constructs.Construct;
+
+import java.util.List;
+import java.util.Map;
 
 public class ComputeStack extends Stack {
 
@@ -56,6 +58,42 @@ public class ComputeStack extends Stack {
 
         dbUsername.grantRead(taskExecutionRole);
 
+        // CloudWatch log driver
+
+        LogDriver dbLogDriver = LogDrivers.awsLogs(AwsLogDriverProps.builder()
+                        .streamPrefix("SagaDatabase")
+                .build());
+
+        // db 1 - trip service
+
+        FargateTaskDefinition tripDbTask = FargateTaskDefinition.Builder.create(this, "TripDbTask")
+                .memoryLimitMiB(512)
+                .cpu(256)
+                .executionRole(taskExecutionRole)
+                .build();
+
+        tripDbTask.addContainer("TripDbContainer", ContainerDefinitionOptions.builder()
+                        .image(ContainerImage.fromRegistry("mysql:8.4.0"))
+                        .essential(true)
+                        .portMappings(List.of(PortMapping.builder()
+                                .containerPort(3306)
+                                .build()))
+                        .logging(dbLogDriver)
+                        .environment(Map.of(
+                                "MYSQL_DATABASE", "trip_service"
+                        ))
+                        .secrets(Map.of(
+                                "MYSQL_ROOT_PASSWORD", Secret.fromSsmParameter(dbPassword)
+                        ))
+                .build());
+
+        FargateService.Builder.create(this, "TripDbService")
+                .cluster(ecsCluster)
+                .taskDefinition(tripDbTask)
+                .cloudMapOptions(CloudMapOptions.builder()
+                        .name("trip-db")
+                        .build())
+                .build();
 
     }
 }
