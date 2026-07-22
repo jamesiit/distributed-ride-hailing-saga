@@ -11,6 +11,7 @@ import software.amazon.awscdk.services.ssm.IStringParameter;
 import software.amazon.awscdk.services.ssm.StringParameter;
 import software.constructs.Construct;
 
+import java.io.File;
 import java.util.List;
 import java.util.Map;
 
@@ -163,5 +164,20 @@ public class ComputeStack extends Stack {
                         .name("dispatch-db")
                         .build())
                 .build();
+
+        // build the trip service image
+        ContainerImage tripServiceImage = ContainerImage.fromAsset(
+                new File("../trip-service").getAbsolutePath()
+        );
+
+        // build the payment service image
+        ContainerImage paymentServiceImage = ContainerImage.fromAsset(
+                new File("../payment-service").getAbsolutePath()
+        );
+
+        // build the dispatch service image
+        ContainerImage dispatchServiceImage = ContainerImage.fromAsset(
+                new File("../dispatch-service").getAbsolutePath()
+        );
     }
 }
