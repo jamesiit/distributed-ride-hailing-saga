@@ -95,5 +95,64 @@ public class ComputeStack extends Stack {
                         .build())
                 .build();
 
+        // db 2 - payment db
+        FargateTaskDefinition paymentDbTask = FargateTaskDefinition.Builder.create(this, "PaymentDbTask")
+                .memoryLimitMiB(512)
+                .cpu(256)
+                .executionRole(taskExecutionRole)
+                .build();
+
+        paymentDbTask.addContainer("PaymentDbContainer", ContainerDefinitionOptions.builder()
+                .image(ContainerImage.fromRegistry("mysql:8.4.0"))
+                .essential(true)
+                .portMappings(List.of(PortMapping.builder()
+                        .containerPort(3306)
+                        .build()))
+                .logging(dbLogDriver)
+                .environment(Map.of(
+                        "MYSQL_DATABASE", "payment_service"
+                ))
+                .secrets(Map.of(
+                        "MYSQL_ROOT_PASSWORD", Secret.fromSsmParameter(dbPassword)
+                ))
+                .build());
+
+        FargateService.Builder.create(this, "PaymentDbService")
+                .cluster(ecsCluster)
+                .taskDefinition(paymentDbTask)
+                .cloudMapOptions(CloudMapOptions.builder()
+                        .name("payment-db")
+                        .build())
+                .build();
+
+        // db 3 - dispatch db
+        FargateTaskDefinition dispatchDbTask = FargateTaskDefinition.Builder.create(this, "DispatchDbTask")
+                .memoryLimitMiB(512)
+                .cpu(256)
+                .executionRole(taskExecutionRole)
+                .build();
+
+        dispatchDbTask.addContainer("DispatchDbContainer", ContainerDefinitionOptions.builder()
+                .image(ContainerImage.fromRegistry("mysql:8.4.0"))
+                .essential(true)
+                .portMappings(List.of(PortMapping.builder()
+                        .containerPort(3306)
+                        .build()))
+                .logging(dbLogDriver)
+                .environment(Map.of(
+                        "MYSQL_DATABASE", "dispatch_service"
+                ))
+                .secrets(Map.of(
+                        "MYSQL_ROOT_PASSWORD", Secret.fromSsmParameter(dbPassword)
+                ))
+                .build());
+
+        FargateService.Builder.create(this, "DispatchDbService")
+                .cluster(ecsCluster)
+                .taskDefinition(dispatchDbTask)
+                .cloudMapOptions(CloudMapOptions.builder()
+                        .name("dispatch-db")
+                        .build())
+                .build();
     }
 }
