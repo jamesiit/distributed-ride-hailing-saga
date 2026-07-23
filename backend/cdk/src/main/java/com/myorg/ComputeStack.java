@@ -1,9 +1,12 @@
 package com.myorg;
 
+import software.amazon.awscdk.Duration;
 import software.amazon.awscdk.Stack;
 import software.amazon.awscdk.StackProps;
 import software.amazon.awscdk.services.ec2.Vpc;
 import software.amazon.awscdk.services.ecs.*;
+import software.amazon.awscdk.services.elasticloadbalancingv2.*;
+import software.amazon.awscdk.services.elasticloadbalancingv2.HealthCheck;
 import software.amazon.awscdk.services.iam.ManagedPolicy;
 import software.amazon.awscdk.services.iam.Role;
 import software.amazon.awscdk.services.iam.ServicePrincipal;
@@ -215,7 +218,7 @@ public class ComputeStack extends Stack {
                 ))
                 .build());
 
-        FargateService.Builder.create(this, "TripAppService")
+        FargateService tripAppService = FargateService.Builder.create(this, "TripAppService")
                 .cluster(ecsCluster)
                 .taskDefinition(tripAppTask)
                 .circuitBreaker(DeploymentCircuitBreaker.builder()
@@ -251,7 +254,7 @@ public class ComputeStack extends Stack {
                 ))
                 .build());
 
-        FargateService.Builder.create(this, "PaymentAppService")
+        FargateService paymentAppService = FargateService.Builder.create(this, "PaymentAppService")
                 .cluster(ecsCluster)
                 .taskDefinition(paymentAppTask)
                 .circuitBreaker(DeploymentCircuitBreaker.builder()
@@ -287,7 +290,7 @@ public class ComputeStack extends Stack {
                 ))
                 .build());
 
-        FargateService.Builder.create(this, "DispatchAppService")
+        FargateService dispatchAppService = FargateService.Builder.create(this, "DispatchAppService")
                 .cluster(ecsCluster)
                 .taskDefinition(dispatchAppTask)
                 .circuitBreaker(DeploymentCircuitBreaker.builder()
@@ -297,5 +300,52 @@ public class ComputeStack extends Stack {
                         .name("dispatch-service")
                         .build())
                 .build();
+
+        // create the public facing ALB
+        ApplicationLoadBalancer alb = ApplicationLoadBalancer.Builder.create(this, "SagaAlb")
+                .vpc(vpc)
+                .internetFacing(true)
+                .build();
+
+        ApplicationListener listener = alb.addListener("HttpListener", BaseApplicationListenerProps.builder()
+                        .port(80)
+                        .defaultAction(ListenerAction.fixedResponse(404, FixedResponseOptions.builder()
+                                        .contentType("text/plain")
+                                        .messageBody("404 - Saga Orchestrator Route Not Found")
+                                .build()))
+                        .build());
+
+        // trip target
+        // trip health check
+        HealthCheck tripHeathCheck = HealthCheck.builder()
+                .path("/trip")
+                .healthyHttpCodes("200")
+                .interval(Duration.seconds(30))
+                .build();
+
+        listener.addTargets("TripTarget", AddApplicationTargetsProps.builder()
+                .port(80)
+                .targets(List.of(tripAppService))
+                .conditions(List.of(ListenerCondition.pathPatterns(List.of("/trip/*", "/trip"))))
+                .priority(10)
+                .healthCheck(tripHeathCheck)
+                .build());
+
+        // payment target
+        // payment health check
+        HealthCheck paymentHeathCheck = HealthCheck.builder()
+                .path("/test/payment")
+                .healthyHttpCodes("200")
+                .interval(Duration.seconds(30))
+                .build();
+
+        // dispatch target
+        // dispatch health check
+        HealthCheck dispatchHealthCheck = HealthCheck.builder()
+                .path("/dispatch")
+                .healthyHttpCodes("200")
+                .interval(Duration.seconds(30))
+                .build();
+
     }
 }
