@@ -225,5 +225,77 @@ public class ComputeStack extends Stack {
                         .name("trip-service")
                         .build())
                 .build();
+
+        // app 2 - payment service
+        FargateTaskDefinition paymentAppTask = FargateTaskDefinition.Builder.create(this, "PaymentAppTask")
+                .memoryLimitMiB(512)
+                .cpu(256)
+                .executionRole(taskExecutionRole)
+                .taskRole(appTaskRole)
+                .build();
+
+        paymentAppTask.addContainer("PaymentAppContainer", ContainerDefinitionOptions.builder()
+                .image(paymentServiceImage)
+                .essential(true)
+                .portMappings(List.of(PortMapping.builder()
+                        .containerPort(8080)
+                        .build()))
+                .logging(appLogDriver)
+                .environment(Map.of(
+                        "SPRING_DATASOURCE_URL", "jdbc:mysql://payment-db.saga.local:3306/payment_service?allowPublicKeyRetrieval=true&useSSL=false",
+                        "SERVER_PORT", "8080"
+                ))
+                .secrets(Map.of(
+                        "SPRING_DATASOURCE_PASSWORD", Secret.fromSsmParameter(dbPassword),
+                        "SPRING_DATASOURCE_USERNAME", Secret.fromSsmParameter(dbUsername)
+                ))
+                .build());
+
+        FargateService.Builder.create(this, "PaymentAppService")
+                .cluster(ecsCluster)
+                .taskDefinition(paymentAppTask)
+                .circuitBreaker(DeploymentCircuitBreaker.builder()
+                        .rollback(true)
+                        .build())
+                .cloudMapOptions(CloudMapOptions.builder()
+                        .name("payment-service")
+                        .build())
+                .build();
+
+        // app 3 - dispatch service
+        FargateTaskDefinition dispatchAppTask = FargateTaskDefinition.Builder.create(this, "DispatchAppTask")
+                .memoryLimitMiB(512)
+                .cpu(256)
+                .executionRole(taskExecutionRole)
+                .taskRole(appTaskRole)
+                .build();
+
+        dispatchAppTask.addContainer("DispatchAppContainer", ContainerDefinitionOptions.builder()
+                .image(dispatchServiceImage)
+                .essential(true)
+                .portMappings(List.of(PortMapping.builder()
+                        .containerPort(8080)
+                        .build()))
+                .logging(appLogDriver)
+                .environment(Map.of(
+                        "SPRING_DATASOURCE_URL", "jdbc:mysql://dispatch-db.saga.local:3306/dispatch_service?allowPublicKeyRetrieval=true&useSSL=false",
+                        "SERVER_PORT", "8080"
+                ))
+                .secrets(Map.of(
+                        "SPRING_DATASOURCE_PASSWORD", Secret.fromSsmParameter(dbPassword),
+                        "SPRING_DATASOURCE_USERNAME", Secret.fromSsmParameter(dbUsername)
+                ))
+                .build());
+
+        FargateService.Builder.create(this, "DispatchAppService")
+                .cluster(ecsCluster)
+                .taskDefinition(dispatchAppTask)
+                .circuitBreaker(DeploymentCircuitBreaker.builder()
+                        .rollback(true)
+                        .build())
+                .cloudMapOptions(CloudMapOptions.builder()
+                        .name("dispatch-service")
+                        .build())
+                .build();
     }
 }
