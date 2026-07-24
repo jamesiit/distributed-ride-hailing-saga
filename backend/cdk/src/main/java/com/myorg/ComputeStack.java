@@ -345,6 +345,14 @@ public class ComputeStack extends Stack {
                 .interval(Duration.seconds(30))
                 .build();
 
+        listener.addTargets("PaymentTarget", AddApplicationTargetsProps.builder()
+                .port(80)
+                .healthCheck(paymentHeathCheck)
+                .targets(List.of(paymentAppService))
+                .conditions(List.of(ListenerCondition.pathPatterns(List.of("/test/payment", "/payment/*", "/payments/*"))))
+                .priority(20)
+                .build());
+
         // dispatch target
         // dispatch health check
         HealthCheck dispatchHealthCheck = HealthCheck.builder()
@@ -353,5 +361,12 @@ public class ComputeStack extends Stack {
                 .interval(Duration.seconds(30))
                 .build();
 
+        listener.addTargets("DispatchTarget", AddApplicationTargetsProps.builder()
+                .port(80)
+                .healthCheck(dispatchHealthCheck)
+                .targets(List.of(dispatchAppService))
+                .conditions(List.of(ListenerCondition.pathPatterns(List.of("/dispatch", "/dispatch/*"))))
+                .priority(30)
+                .build());
     }
 }
