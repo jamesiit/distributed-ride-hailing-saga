@@ -25,18 +25,20 @@ public class VpcStack extends Stack {
 
         this.sagaVpc = Vpc.Builder.create(this, "SagaVPC")
                 .ipAddresses(IpAddresses.cidr("10.0.0.0/16"))
-                .maxAzs(1)
+                .maxAzs(2)
                 .natGateways(1)
                 .subnetConfiguration(Arrays.asList(
 
+                        // CDK creates a /24 Public Subnet in AZ1 and AZ2 so it is 2 subnets
                         SubnetConfiguration.builder()
-                                .name("PublicSubnet")
+                                .name("Public")
                                 .subnetType(SubnetType.PUBLIC)
                                 .cidrMask(24)
                                 .build(),
 
+                        // CDK creates a /24 Private Subnet in AZ1 AND AZ2. You get 2 subnets
                         SubnetConfiguration.builder()
-                                .name("PrivateSubnet")
+                                .name("Private")
                                 .subnetType(SubnetType.PRIVATE_WITH_EGRESS)
                                 .cidrMask(24)
                                 .build()
