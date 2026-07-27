@@ -11,6 +11,9 @@ import software.amazon.awscdk.StackProps;
 import java.util.Arrays;
 
 public class VpcStack extends Stack {
+
+    private Vpc sagaVpc;
+
     public VpcStack(final Construct scope, final String id) {
         this(scope, id, null);
     }
@@ -20,26 +23,31 @@ public class VpcStack extends Stack {
 
         // The code that defines your stack goes here
 
-        Vpc vpc = Vpc.Builder.create(this, "SagaVPC")
+        this.sagaVpc = Vpc.Builder.create(this, "SagaVPC")
                 .ipAddresses(IpAddresses.cidr("10.0.0.0/16"))
-                .maxAzs(1)
+                .maxAzs(2)
                 .natGateways(1)
                 .subnetConfiguration(Arrays.asList(
 
+                        // CDK creates a /24 Public Subnet in AZ1 and AZ2 so it is 2 subnets
                         SubnetConfiguration.builder()
-                                .name("PublicSubnet")
+                                .name("Public")
                                 .subnetType(SubnetType.PUBLIC)
                                 .cidrMask(24)
                                 .build(),
 
+                        // CDK creates a /24 Private Subnet in AZ1 AND AZ2. You get 2 subnets
                         SubnetConfiguration.builder()
-                                .name("PrivateSubnet")
+                                .name("Private")
                                 .subnetType(SubnetType.PRIVATE_WITH_EGRESS)
                                 .cidrMask(24)
                                 .build()
                 ))
                 .build();
-
-
     }
+
+    public Vpc getSagaVpc() {
+        return this.sagaVpc;
+    }
+
 }

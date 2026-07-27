@@ -12,17 +12,21 @@ public class CdkApp {
 
         App app = new App();
 
-        new VpcStack(app, "VpcStack", StackProps.builder()
+        Environment env = Environment.builder()
+                .account(System.getenv("CDK_DEFAULT_ACCOUNT"))
+                .region(System.getenv("CDK_DEFAULT_REGION"))
+                .build();
 
-                .env(Environment.builder()
-                        .account(System.getenv("CDK_DEFAULT_ACCOUNT"))
-                        .region(System.getenv("CDK_DEFAULT_REGION"))
-                        .build())
+        StackProps stackProps = StackProps.builder()
+                .env(env)
+                .build();
 
-                .build());
+        VpcStack vpcStack = new VpcStack(app, "VpcStack", stackProps);
 
-        new ComputeStack(app, "ComputeStack", StackProps.builder()
-                .build()
+        new ComputeStack(app,
+                "ComputeStack",
+                vpcStack.getSagaVpc(),
+                stackProps
         );
 
         app.synth();
