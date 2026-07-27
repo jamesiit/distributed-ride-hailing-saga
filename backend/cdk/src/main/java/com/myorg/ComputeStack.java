@@ -3,6 +3,7 @@ package com.myorg;
 import software.amazon.awscdk.Duration;
 import software.amazon.awscdk.Stack;
 import software.amazon.awscdk.StackProps;
+import software.amazon.awscdk.services.ec2.Port;
 import software.amazon.awscdk.services.ec2.Vpc;
 import software.amazon.awscdk.services.ecs.*;
 import software.amazon.awscdk.services.elasticloadbalancingv2.*;
@@ -11,6 +12,7 @@ import software.amazon.awscdk.services.iam.ManagedPolicy;
 import software.amazon.awscdk.services.iam.Role;
 import software.amazon.awscdk.services.iam.ServicePrincipal;
 import software.amazon.awscdk.services.ssm.IStringParameter;
+import software.amazon.awscdk.services.ssm.SecureStringParameterAttributes;
 import software.amazon.awscdk.services.ssm.StringParameter;
 import software.constructs.Construct;
 
@@ -27,6 +29,7 @@ public class ComputeStack extends Stack {
         Cluster ecsCluster = Cluster.Builder.create(this, "SagaCluster")
                 .vpc(vpc)
                 .clusterName("SagaRideHailingCluster")
+                .containerInsightsV2(ContainerInsights.ENABLED)
                 .build();
 
         // initializing CloudMap to be attached to the cluster
@@ -45,20 +48,18 @@ public class ComputeStack extends Stack {
         );
 
         // add the policy to Agent - Read the database password from SSM
-        IStringParameter dbPassword = StringParameter.fromStringParameterName(
-                this,
-                "SagaDbPassword",
-                "/saga/DATABASE_PASSWORD"
-        );
+        IStringParameter dbPassword = StringParameter.fromSecureStringParameterAttributes(this, "DBPassword",
+                SecureStringParameterAttributes.builder()
+                        .parameterName("/saga/DATABASE_PASSWORD")
+                .build());
 
         dbPassword.grantRead(taskExecutionRole);
 
         // add the policy to Agent - Read the database username from SSM
-        IStringParameter dbUsername = StringParameter.fromStringParameterName(
-                this,
-                "SagaDbUsername",
-                "/saga/DATABASE_USERNAME"
-        );
+        IStringParameter dbUsername = StringParameter.fromSecureStringParameterAttributes(this, "DBUsername",
+                SecureStringParameterAttributes.builder()
+                        .parameterName("/saga/DATABASE_USERNAME")
+                        .build());
 
         dbUsername.grantRead(taskExecutionRole);
 
@@ -91,13 +92,13 @@ public class ComputeStack extends Stack {
                         ))
                 .build());
 
-        FargateService.Builder.create(this, "TripDbService")
+        FargateService tripDbService = FargateService.Builder.create(this, "TripDbService")
                 .cluster(ecsCluster)
                 .taskDefinition(tripDbTask)
                 .circuitBreaker(DeploymentCircuitBreaker.builder()
                         .rollback(true)
                         .build())
-                .desiredCount(2)
+                .desiredCount(1)
                 .cloudMapOptions(CloudMapOptions.builder()
                         .name("trip-db")
                         .build())
@@ -125,13 +126,13 @@ public class ComputeStack extends Stack {
                 ))
                 .build());
 
-        FargateService.Builder.create(this, "PaymentDbService")
+        FargateService paymentDbService = FargateService.Builder.create(this, "PaymentDbService")
                 .cluster(ecsCluster)
                 .taskDefinition(paymentDbTask)
                 .circuitBreaker(DeploymentCircuitBreaker.builder()
                         .rollback(true)
                         .build())
-                .desiredCount(2)
+                .desiredCount(1)
                 .cloudMapOptions(CloudMapOptions.builder()
                         .name("payment-db")
                         .build())
@@ -159,13 +160,13 @@ public class ComputeStack extends Stack {
                 ))
                 .build());
 
-        FargateService.Builder.create(this, "DispatchDbService")
+        FargateService dispatchDbService = FargateService.Builder.create(this, "DispatchDbService")
                 .cluster(ecsCluster)
                 .taskDefinition(dispatchDbTask)
                 .circuitBreaker(DeploymentCircuitBreaker.builder()
                         .rollback(true)
                         .build())
-                .desiredCount(2)
+                .desiredCount(1)
                 .cloudMapOptions(CloudMapOptions.builder()
                         .name("dispatch-db")
                         .build())
@@ -213,7 +214,10 @@ public class ComputeStack extends Stack {
                 .logging(appLogDriver)
                 .environment(Map.of(
                         "SPRING_DATASOURCE_URL", "jdbc:mysql://trip-db.saga.local:3306/trip_service?allowPublicKeyRetrieval=true&useSSL=false",
-                        "SERVER_PORT", "8080"
+                        "SERVER_PORT", "8080",
+                        "SPRING_DATASOURCE_HIKARI_CONNECTIONTIMEOUT", "120000",
+                        "SPRING_JPA_DATABASE_PLATFORM", "org.hibernate.dialect.MySQLDialect",
+                        "SPRING_DATASOURCE_HIKARI_INITIALIZATIONFAILTIMEOUT", "-1"
                 ))
                 .secrets(Map.of(
                         "SPRING_DATASOURCE_PASSWORD", Secret.fromSsmParameter(dbPassword),
@@ -250,7 +254,10 @@ public class ComputeStack extends Stack {
                 .logging(appLogDriver)
                 .environment(Map.of(
                         "SPRING_DATASOURCE_URL", "jdbc:mysql://payment-db.saga.local:3306/payment_service?allowPublicKeyRetrieval=true&useSSL=false",
-                        "SERVER_PORT", "8080"
+                        "SERVER_PORT", "8080",
+                        "SPRING_DATASOURCE_HIKARI_CONNECTIONTIMEOUT", "120000",
+                        "SPRING_JPA_DATABASE_PLATFORM", "org.hibernate.dialect.MySQLDialect",
+                        "SPRING_DATASOURCE_HIKARI_INITIALIZATIONFAILTIMEOUT", "-1"
                 ))
                 .secrets(Map.of(
                         "SPRING_DATASOURCE_PASSWORD", Secret.fromSsmParameter(dbPassword),
@@ -287,7 +294,10 @@ public class ComputeStack extends Stack {
                 .logging(appLogDriver)
                 .environment(Map.of(
                         "SPRING_DATASOURCE_URL", "jdbc:mysql://dispatch-db.saga.local:3306/dispatch_service?allowPublicKeyRetrieval=true&useSSL=false",
-                        "SERVER_PORT", "8080"
+                        "SERVER_PORT", "8080",
+                        "SPRING_DATASOURCE_HIKARI_CONNECTIONTIMEOUT", "120000",
+                        "SPRING_JPA_DATABASE_PLATFORM", "org.hibernate.dialect.MySQLDialect",
+                        "SPRING_DATASOURCE_HIKARI_INITIALIZATIONFAILTIMEOUT", "-1"
                 ))
                 .secrets(Map.of(
                         "SPRING_DATASOURCE_PASSWORD", Secret.fromSsmParameter(dbPassword),
@@ -306,6 +316,15 @@ public class ComputeStack extends Stack {
                         .name("dispatch-service")
                         .build())
                 .build();
+
+        // allow trip app to talk to trip db on mysql port 3306
+        tripDbService.getConnections().allowFrom(tripAppService, Port.tcp(3306), "Allow Trip App Inbound");
+
+        // allow payment app to talk to payment db on mysql port 3306
+        paymentDbService.getConnections().allowFrom(paymentAppService, Port.tcp(3306), "Allow Payment App Inbound");
+
+        // allow dispatch app to talk to dispatch db on mysql port 3306
+        dispatchDbService.getConnections().allowFrom(dispatchAppService, Port.tcp(3306), "Allow Dispatch App Inbound");
 
         // create the public facing ALB
         ApplicationLoadBalancer alb = ApplicationLoadBalancer.Builder.create(this, "SagaAlb")
@@ -326,11 +345,11 @@ public class ComputeStack extends Stack {
         HealthCheck tripHeathCheck = HealthCheck.builder()
                 .path("/trip")
                 .healthyHttpCodes("200")
-                .interval(Duration.seconds(30))
+                .interval(Duration.seconds(45))
                 .build();
 
         listener.addTargets("TripTarget", AddApplicationTargetsProps.builder()
-                .port(80)
+                .port(8080)
                 .targets(List.of(tripAppService))
                 .conditions(List.of(ListenerCondition.pathPatterns(List.of("/trip/*", "/trip"))))
                 .priority(10)
@@ -342,14 +361,20 @@ public class ComputeStack extends Stack {
         HealthCheck paymentHeathCheck = HealthCheck.builder()
                 .path("/test/payment")
                 .healthyHttpCodes("200")
-                .interval(Duration.seconds(30))
+                .interval(Duration.seconds(45))
                 .build();
 
         listener.addTargets("PaymentTarget", AddApplicationTargetsProps.builder()
-                .port(80)
+                .port(8080)
                 .healthCheck(paymentHeathCheck)
                 .targets(List.of(paymentAppService))
-                .conditions(List.of(ListenerCondition.pathPatterns(List.of("/test/payment", "/payment/*", "/payments/*"))))
+                .conditions(List.of(ListenerCondition.pathPatterns(List.of(
+                        "/test/payment",
+                        "/payment",
+                        "/payment/*",
+                        "/payments",
+                        "/payments/*"
+                ))))
                 .priority(20)
                 .build());
 
@@ -358,14 +383,17 @@ public class ComputeStack extends Stack {
         HealthCheck dispatchHealthCheck = HealthCheck.builder()
                 .path("/dispatch")
                 .healthyHttpCodes("200")
-                .interval(Duration.seconds(30))
+                .interval(Duration.seconds(45))
                 .build();
 
         listener.addTargets("DispatchTarget", AddApplicationTargetsProps.builder()
-                .port(80)
+                .port(8080)
                 .healthCheck(dispatchHealthCheck)
                 .targets(List.of(dispatchAppService))
-                .conditions(List.of(ListenerCondition.pathPatterns(List.of("/dispatch", "/dispatch/*"))))
+                .conditions(List.of(ListenerCondition.pathPatterns(List.of(
+                        "/dispatch",
+                        "/dispatch/*"
+                ))))
                 .priority(30)
                 .build());
     }
