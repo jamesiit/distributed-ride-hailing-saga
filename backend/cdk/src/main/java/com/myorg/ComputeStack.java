@@ -3,6 +3,10 @@ package com.myorg;
 import software.amazon.awscdk.Duration;
 import software.amazon.awscdk.Stack;
 import software.amazon.awscdk.StackProps;
+import software.amazon.awscdk.aws_apigatewayv2_integrations.HttpAlbIntegration;
+import software.amazon.awscdk.services.apigatewayv2.AddRoutesOptions;
+import software.amazon.awscdk.services.apigatewayv2.HttpApi;
+import software.amazon.awscdk.services.apigatewayv2.HttpMethod;
 import software.amazon.awscdk.services.ec2.Port;
 import software.amazon.awscdk.services.ec2.Vpc;
 import software.amazon.awscdk.services.ecs.*;
@@ -14,6 +18,7 @@ import software.amazon.awscdk.services.iam.ServicePrincipal;
 import software.amazon.awscdk.services.ssm.IStringParameter;
 import software.amazon.awscdk.services.ssm.SecureStringParameterAttributes;
 import software.amazon.awscdk.services.ssm.StringParameter;
+import software.amazon.awscdk.services.stepfunctions.Pass;
 import software.constructs.Construct;
 
 import java.io.File;
@@ -395,6 +400,33 @@ public class ComputeStack extends Stack {
                         "/dispatch/*"
                 ))))
                 .priority(30)
+                .build());
+
+        // step functions
+        // api gateway http api
+        HttpApi proxyApi = HttpApi.Builder.create(this, "SagaProxyApi")
+                .apiName("SagaInternalProxy")
+                .build();
+
+
+        HttpAlbIntegration albIntegration = new HttpAlbIntegration("AlbIntegration", listener);
+
+        proxyApi.addRoutes(AddRoutesOptions.builder()
+                        .path("/trip")
+                        .methods(List.of(HttpMethod.POST))
+                        .integration(albIntegration)
+                .build());
+
+        proxyApi.addRoutes(AddRoutesOptions.builder()
+                .path("/payment")
+                .methods(List.of(HttpMethod.POST))
+                .integration(albIntegration)
+                .build());
+
+        proxyApi.addRoutes(AddRoutesOptions.builder()
+                .path("/dispatch")
+                .methods(List.of(HttpMethod.POST))
+                .integration(albIntegration)
                 .build());
     }
 }
