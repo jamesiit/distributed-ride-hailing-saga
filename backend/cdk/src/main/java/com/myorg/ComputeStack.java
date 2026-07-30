@@ -18,7 +18,8 @@ import software.amazon.awscdk.services.iam.ServicePrincipal;
 import software.amazon.awscdk.services.ssm.IStringParameter;
 import software.amazon.awscdk.services.ssm.SecureStringParameterAttributes;
 import software.amazon.awscdk.services.ssm.StringParameter;
-import software.amazon.awscdk.services.stepfunctions.Pass;
+import software.amazon.awscdk.services.stepfunctions.TaskInput;
+import software.amazon.awscdk.services.stepfunctions.tasks.CallApiGatewayHttpApiEndpoint;
 import software.constructs.Construct;
 
 import java.io.File;
@@ -428,5 +429,16 @@ public class ComputeStack extends Stack {
                 .methods(List.of(HttpMethod.POST))
                 .integration(albIntegration)
                 .build());
+
+        // step functions task states
+        CallApiGatewayHttpApiEndpoint createTripTask = CallApiGatewayHttpApiEndpoint.Builder.create(this, "CreateTrip")
+                .apiId(proxyApi.getApiId())
+                .apiStack(Stack.of(proxyApi))
+                .method(software.amazon.awscdk.services.stepfunctions.tasks.HttpMethod.POST)
+                .apiPath("/trip")
+                .requestBody(TaskInput.fromJsonPathAt("$"))
+                .build();
+
+
     }
 }
