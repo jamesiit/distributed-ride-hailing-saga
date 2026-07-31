@@ -1,5 +1,6 @@
 package com.myorg;
 
+import software.amazon.awscdk.CfnOutput;
 import software.amazon.awscdk.Duration;
 import software.amazon.awscdk.Stack;
 import software.amazon.awscdk.StackProps;
@@ -18,7 +19,7 @@ import software.amazon.awscdk.services.iam.ServicePrincipal;
 import software.amazon.awscdk.services.ssm.IStringParameter;
 import software.amazon.awscdk.services.ssm.SecureStringParameterAttributes;
 import software.amazon.awscdk.services.ssm.StringParameter;
-import software.amazon.awscdk.services.stepfunctions.TaskInput;
+import software.amazon.awscdk.services.stepfunctions.*;
 import software.amazon.awscdk.services.stepfunctions.tasks.CallApiGatewayHttpApiEndpoint;
 import software.constructs.Construct;
 
@@ -335,7 +336,7 @@ public class ComputeStack extends Stack {
         // create the public facing ALB
         ApplicationLoadBalancer alb = ApplicationLoadBalancer.Builder.create(this, "SagaAlb")
                 .vpc(vpc)
-                .internetFacing(true)
+                .internetFacing(false)
                 .build();
 
         ApplicationListener listener = alb.addListener("HttpListener", BaseApplicationListenerProps.builder()
@@ -431,6 +432,7 @@ public class ComputeStack extends Stack {
                 .build());
 
         // step functions task states
+        // trip task state
         CallApiGatewayHttpApiEndpoint createTripTask = CallApiGatewayHttpApiEndpoint.Builder.create(this, "CreateTrip")
                 .apiId(proxyApi.getApiId())
                 .apiStack(Stack.of(proxyApi))
@@ -439,6 +441,39 @@ public class ComputeStack extends Stack {
                 .requestBody(TaskInput.fromJsonPathAt("$"))
                 .build();
 
+        // payment task state
+        CallApiGatewayHttpApiEndpoint processPaymentTask = CallApiGatewayHttpApiEndpoint.Builder.create(this, "ProcessPayment")
+                .apiId(proxyApi.getApiId())
+                .apiStack(Stack.of(proxyApi))
+                .method(software.amazon.awscdk.services.stepfunctions.tasks.HttpMethod.POST)
+                .apiPath("/payment")
+                .requestBody(TaskInput.fromObject(Map.of(
+                        "tripId", JsonPath.stringAt("$.tripResult.tripId"),
+                        "paymentAmount", 50.00
+                )))
+                .build();
 
+        // dispatch task
+        CallApiGatewayHttpApiEndpoint createDispatchTask = CallApiGatewayHttpApiEndpoint.Builder.create(this, "CreateDispatch")
+                .apiId(proxyApi.getApiId())
+                .apiStack(Stack.of(proxyApi))
+                .method(software.amazon.awscdk.services.stepfunctions.tasks.HttpMethod.POST)
+                .apiPath("/dispatch")
+                .requestBody(TaskInput.fromObject(Map.of(
+                        "tripId", JsonPath.stringAt("$.tripResult.tripId"),
+                        "cabNo", "RTS-7751",
+                        "cabDriver", "Armin Arlet",
+                        "pickupLocation", "Wall Siena"
+                )))
+                .build();
+
+        // linking the tasks sequentially
+        Chain happyPath = Chain.start(createTripTask).next(processPaymentTask).next(createDispatchTask);
+
+        StateMachine sagaStateMachine = StateMachine.Builder.create(this, "SagaStateMachine")
+                .stateMachineName("RideHailingSaga")
+                .definitionBody(DefinitionBody.fromChainable(happyPath))
+                .stateMachineType(StateMachineType.EXPRESS)
+                .build();
     }
 }
