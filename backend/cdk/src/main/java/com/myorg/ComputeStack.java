@@ -467,6 +467,12 @@ public class ComputeStack extends Stack {
                 .integration(albIntegration)
                 .build());
 
+        proxyApi.addRoutes(AddRoutesOptions.builder()
+                .path("/trip/complete")
+                .methods(List.of(HttpMethod.POST))
+                .integration(albIntegration)
+                .build());
+
         // step functions task states
         // trip task state
         CallApiGatewayHttpApiEndpoint createTripTask = CallApiGatewayHttpApiEndpoint.Builder.create(this, "CreateTrip")
@@ -518,8 +524,24 @@ public class ComputeStack extends Stack {
                 )))
                 .build();
 
+        // complete trip task
+        CallApiGatewayHttpApiEndpoint completeTripTask = CallApiGatewayHttpApiEndpoint.Builder.create(this, "CompleteTrip")
+                .apiId(proxyApi.getApiId())
+                .apiStack(Stack.of(proxyApi))
+                .method(software.amazon.awscdk.services.stepfunctions.tasks.HttpMethod.POST)
+                .apiPath("/trip/complete")
+                .authType(AuthType.NO_AUTH)
+                .requestBody(TaskInput.fromObject(Map.of(
+                        "tripId", JsonPath.stringAt("$.tripResult.ResponseBody")
+                )))
+                .resultPath("$.completeTrip")
+                .headers(TaskInput.fromObject(Map.of(
+                        "Content-Type", List.of("application/json")
+                )))
+                .build();
+
         // linking the tasks sequentially
-        Chain happyPath = Chain.start(createTripTask).next(processPaymentTask).next(createDispatchTask);
+        Chain happyPath = Chain.start(createTripTask).next(processPaymentTask).next(createDispatchTask).next(completeTripTask);
 
         LogGroup sagaLogGroup = LogGroup.Builder.create(this, "SagaLogGroup")
                 .logGroupName("/aws/vendedlogs/states/RideHailingSagaStepFunctionsLogs")
