@@ -1,25 +1,30 @@
 package com.myorg;
 
-import software.amazon.awscdk.CfnOutput;
-import software.amazon.awscdk.Duration;
-import software.amazon.awscdk.Stack;
-import software.amazon.awscdk.StackProps;
+import software.amazon.awscdk.*;
 import software.amazon.awscdk.aws_apigatewayv2_integrations.HttpAlbIntegration;
+import software.amazon.awscdk.services.apigateway.*;
 import software.amazon.awscdk.services.apigatewayv2.AddRoutesOptions;
 import software.amazon.awscdk.services.apigatewayv2.HttpApi;
 import software.amazon.awscdk.services.apigatewayv2.HttpMethod;
+import software.amazon.awscdk.services.apigatewayv2.VpcLink;
+import software.amazon.awscdk.services.ec2.Peer;
 import software.amazon.awscdk.services.ec2.Port;
+import software.amazon.awscdk.services.ec2.SecurityGroup;
 import software.amazon.awscdk.services.ec2.Vpc;
 import software.amazon.awscdk.services.ecs.*;
 import software.amazon.awscdk.services.elasticloadbalancingv2.*;
 import software.amazon.awscdk.services.elasticloadbalancingv2.HealthCheck;
 import software.amazon.awscdk.services.iam.ManagedPolicy;
+import software.amazon.awscdk.services.iam.PolicyStatement;
 import software.amazon.awscdk.services.iam.Role;
 import software.amazon.awscdk.services.iam.ServicePrincipal;
+import software.amazon.awscdk.services.logs.LogGroup;
+import software.amazon.awscdk.services.logs.RetentionDays;
 import software.amazon.awscdk.services.ssm.IStringParameter;
 import software.amazon.awscdk.services.ssm.SecureStringParameterAttributes;
 import software.amazon.awscdk.services.ssm.StringParameter;
 import software.amazon.awscdk.services.stepfunctions.*;
+import software.amazon.awscdk.services.stepfunctions.tasks.AuthType;
 import software.amazon.awscdk.services.stepfunctions.tasks.CallApiGatewayHttpApiEndpoint;
 import software.constructs.Construct;
 
@@ -224,7 +229,8 @@ public class ComputeStack extends Stack {
                         "SERVER_PORT", "8080",
                         "SPRING_DATASOURCE_HIKARI_CONNECTIONTIMEOUT", "120000",
                         "SPRING_JPA_DATABASE_PLATFORM", "org.hibernate.dialect.MySQLDialect",
-                        "SPRING_DATASOURCE_HIKARI_INITIALIZATIONFAILTIMEOUT", "-1"
+                        "SERVER_TOMCAT_KEEP_ALIVE_TIMEOUT", "70000",
+                        "SERVER_TOMCAT_MAX_KEEP_ALIVE_REQUESTS", "5000"
                 ))
                 .secrets(Map.of(
                         "SPRING_DATASOURCE_PASSWORD", Secret.fromSsmParameter(dbPassword),
@@ -242,6 +248,7 @@ public class ComputeStack extends Stack {
                 .cloudMapOptions(CloudMapOptions.builder()
                         .name("trip-service")
                         .build())
+                .healthCheckGracePeriod(Duration.seconds(180))
                 .build();
 
         // app 2 - payment service
@@ -264,7 +271,8 @@ public class ComputeStack extends Stack {
                         "SERVER_PORT", "8080",
                         "SPRING_DATASOURCE_HIKARI_CONNECTIONTIMEOUT", "120000",
                         "SPRING_JPA_DATABASE_PLATFORM", "org.hibernate.dialect.MySQLDialect",
-                        "SPRING_DATASOURCE_HIKARI_INITIALIZATIONFAILTIMEOUT", "-1"
+                        "SERVER_TOMCAT_KEEP_ALIVE_TIMEOUT", "70000",
+                        "SERVER_TOMCAT_MAX_KEEP_ALIVE_REQUESTS", "5000"
                 ))
                 .secrets(Map.of(
                         "SPRING_DATASOURCE_PASSWORD", Secret.fromSsmParameter(dbPassword),
@@ -282,6 +290,7 @@ public class ComputeStack extends Stack {
                 .cloudMapOptions(CloudMapOptions.builder()
                         .name("payment-service")
                         .build())
+                .healthCheckGracePeriod(Duration.seconds(180))
                 .build();
 
         // app 3 - dispatch service
@@ -304,7 +313,8 @@ public class ComputeStack extends Stack {
                         "SERVER_PORT", "8080",
                         "SPRING_DATASOURCE_HIKARI_CONNECTIONTIMEOUT", "120000",
                         "SPRING_JPA_DATABASE_PLATFORM", "org.hibernate.dialect.MySQLDialect",
-                        "SPRING_DATASOURCE_HIKARI_INITIALIZATIONFAILTIMEOUT", "-1"
+                        "SERVER_TOMCAT_KEEP_ALIVE_TIMEOUT", "70000",
+                        "SERVER_TOMCAT_MAX_KEEP_ALIVE_REQUESTS", "5000"
                 ))
                 .secrets(Map.of(
                         "SPRING_DATASOURCE_PASSWORD", Secret.fromSsmParameter(dbPassword),
@@ -322,6 +332,7 @@ public class ComputeStack extends Stack {
                 .cloudMapOptions(CloudMapOptions.builder()
                         .name("dispatch-service")
                         .build())
+                .healthCheckGracePeriod(Duration.seconds(180))
                 .build();
 
         // allow trip app to talk to trip db on mysql port 3306
@@ -353,6 +364,8 @@ public class ComputeStack extends Stack {
                 .path("/trip")
                 .healthyHttpCodes("200")
                 .interval(Duration.seconds(45))
+                .timeout(Duration.seconds(15))
+                .unhealthyThresholdCount(5)
                 .build();
 
         listener.addTargets("TripTarget", AddApplicationTargetsProps.builder()
@@ -369,6 +382,8 @@ public class ComputeStack extends Stack {
                 .path("/test/payment")
                 .healthyHttpCodes("200")
                 .interval(Duration.seconds(45))
+                .timeout(Duration.seconds(15))
+                .unhealthyThresholdCount(5)
                 .build();
 
         listener.addTargets("PaymentTarget", AddApplicationTargetsProps.builder()
@@ -391,6 +406,8 @@ public class ComputeStack extends Stack {
                 .path("/dispatch")
                 .healthyHttpCodes("200")
                 .interval(Duration.seconds(45))
+                .timeout(Duration.seconds(15))
+                .unhealthyThresholdCount(5)
                 .build();
 
         listener.addTargets("DispatchTarget", AddApplicationTargetsProps.builder()
@@ -410,8 +427,27 @@ public class ComputeStack extends Stack {
                 .apiName("SagaInternalProxy")
                 .build();
 
+        SecurityGroup vpcLinkSg = SecurityGroup.Builder.create(this, "SagaVpcLinkSg")
+                .vpc(vpc)
+                .allowAllOutbound(true)
+                .description("Explicit SG for API Gateway VPC Link")
+                .build();
 
-        HttpAlbIntegration albIntegration = new HttpAlbIntegration("AlbIntegration", listener);
+        VpcLink vpcLink = VpcLink.Builder.create(this, "SagaVpcLink")
+                .vpc(vpc)
+                .vpcLinkName("saga-internal-tunnel")
+                .securityGroups(List.of(vpcLinkSg))
+                .build();
+
+        HttpAlbIntegration albIntegration = HttpAlbIntegration.Builder.create("AlbIntegration", listener)
+                        .vpcLink(vpcLink)
+                        .build();
+
+        alb.getConnections().allowFrom(
+                vpcLinkSg,
+                Port.tcp(80),
+                "Allow API Gateway VPC Link to access ALB"
+        );
 
         proxyApi.addRoutes(AddRoutesOptions.builder()
                         .path("/trip")
@@ -438,7 +474,12 @@ public class ComputeStack extends Stack {
                 .apiStack(Stack.of(proxyApi))
                 .method(software.amazon.awscdk.services.stepfunctions.tasks.HttpMethod.POST)
                 .apiPath("/trip")
+                .authType(AuthType.NO_AUTH)
                 .requestBody(TaskInput.fromJsonPathAt("$"))
+                .resultPath("$.tripResult")
+                .headers(TaskInput.fromObject(Map.of(
+                        "Content-Type", List.of("application/json")
+                )))
                 .build();
 
         // payment task state
@@ -447,10 +488,15 @@ public class ComputeStack extends Stack {
                 .apiStack(Stack.of(proxyApi))
                 .method(software.amazon.awscdk.services.stepfunctions.tasks.HttpMethod.POST)
                 .apiPath("/payment")
+                .authType(AuthType.NO_AUTH)
                 .requestBody(TaskInput.fromObject(Map.of(
-                        "tripId", JsonPath.stringAt("$.tripResult.tripId"),
+                        "tripId", JsonPath.stringAt("$.tripResult.ResponseBody"),
                         "paymentAmount", 50.00
+                ))).headers(TaskInput.fromObject(Map.of(
+                        "Content-Type", List.of("application/json"),
+                        "Idempotency-Key", JsonPath.array(JsonPath.uuid())
                 )))
+                .resultPath("$.paymentResult")
                 .build();
 
         // dispatch task
@@ -459,21 +505,86 @@ public class ComputeStack extends Stack {
                 .apiStack(Stack.of(proxyApi))
                 .method(software.amazon.awscdk.services.stepfunctions.tasks.HttpMethod.POST)
                 .apiPath("/dispatch")
+                .authType(AuthType.NO_AUTH)
                 .requestBody(TaskInput.fromObject(Map.of(
-                        "tripId", JsonPath.stringAt("$.tripResult.tripId"),
+                        "tripId", JsonPath.stringAt("$.tripResult.ResponseBody"),
                         "cabNo", "RTS-7751",
                         "cabDriver", "Armin Arlet",
                         "pickupLocation", "Wall Siena"
+                )))
+                .resultPath("$.dispatchResult")
+                .headers(TaskInput.fromObject(Map.of(
+                        "Content-Type", List.of("application/json")
                 )))
                 .build();
 
         // linking the tasks sequentially
         Chain happyPath = Chain.start(createTripTask).next(processPaymentTask).next(createDispatchTask);
 
+        LogGroup sagaLogGroup = LogGroup.Builder.create(this, "SagaLogGroup")
+                .logGroupName("/aws/vendedlogs/states/RideHailingSagaStepFunctionsLogs")
+                .retention(RetentionDays.ONE_WEEK)
+                .removalPolicy(RemovalPolicy.DESTROY)
+                .build();
+
         StateMachine sagaStateMachine = StateMachine.Builder.create(this, "SagaStateMachine")
                 .stateMachineName("RideHailingSaga")
                 .definitionBody(DefinitionBody.fromChainable(happyPath))
                 .stateMachineType(StateMachineType.EXPRESS)
+                .logs(LogOptions.builder()
+                        .destination(sagaLogGroup)
+                        .level(LogLevel.ALL)
+                        .includeExecutionData(true)
+                        .build())
+                .build();
+
+        // create the permissions for api gateway to access step functions
+        Role apiGatewayRole = Role.Builder.create(this, "ApiGatewayToStepFunctionsRole")
+                .assumedBy(new ServicePrincipal("apigateway.amazonaws.com"))
+                .build();
+
+        apiGatewayRole.addToPolicy(PolicyStatement.Builder.create()
+                        .actions(List.of("states:StartSyncExecution"))
+                        .resources(List.of(sagaStateMachine.getStateMachineArn()))
+                .build());
+
+        RestApi triggerApi = RestApi.Builder.create(this, "SagaTriggerAPI")
+                .restApiName("SagaExternalTrigger")
+                .build();
+
+        AwsIntegration stepFunctionsIntegration = AwsIntegration.Builder.create()
+                .service("states")
+                .action("StartSyncExecution")
+                .integrationHttpMethod("POST")
+                .options(IntegrationOptions.builder()
+                        .credentialsRole(apiGatewayRole)
+                        .passthroughBehavior(PassthroughBehavior.NEVER)
+                        .requestTemplates(Map.of(
+                                "application/json",
+                                "{ \"input\": \"$util.escapeJavaScript($input.json('$'))\", \"stateMachineArn\": \"" + sagaStateMachine.getStateMachineArn() + "\" }"
+                        ))
+                        .integrationResponses(List.of(
+                                IntegrationResponse.builder()
+                                        .statusCode("200")
+                                        .responseTemplates(Map.of(
+                                                "application/json",
+                                                "$input.path('$')"
+                                        ))
+                                        .build()
+                        ))
+                        .build())
+                .build();
+
+        triggerApi.getRoot().addResource("start-saga")
+                .addMethod("POST", stepFunctionsIntegration, MethodOptions.builder()
+                        .methodResponses(List.of(MethodResponse.builder()
+                                        .statusCode("200")
+                                .build()))
+                        .build());
+
+        CfnOutput.Builder.create(this, "StartingUrl")
+                .value(triggerApi.getUrl() + "start-saga")
+                .description("The starting url")
                 .build();
     }
 }
