@@ -473,7 +473,55 @@ public class ComputeStack extends Stack {
                 .integration(albIntegration)
                 .build());
 
+        proxyApi.addRoutes(AddRoutesOptions.builder()
+                .path("/payments/refund")
+                .methods(List.of(HttpMethod.POST))
+                .integration(albIntegration)
+                .build());
+
+        proxyApi.addRoutes(AddRoutesOptions.builder()
+                .path("/trip/cancel")
+                .methods(List.of(HttpMethod.POST))
+                .integration(albIntegration)
+                .build());
+
         // step functions task states
+
+        // refund task state
+        CallApiGatewayHttpApiEndpoint refundPaymentTask = CallApiGatewayHttpApiEndpoint.Builder.create(this, "RefundPaymentTask")
+                .apiId(proxyApi.getApiId())
+                .apiStack(Stack.of(proxyApi))
+                .method(software.amazon.awscdk.services.stepfunctions.tasks.HttpMethod.POST)
+                .apiPath("/payments/refund")
+                .authType(AuthType.NO_AUTH)
+                .requestBody(TaskInput.fromObject(Map.of(
+                        "tripId", JsonPath.stringAt("$.tripResult.ResponseBody")
+                )))
+                .headers(TaskInput.fromObject(Map.of(
+                        "Content-Type", List.of("application/json"),
+                        "Idempotency-Key", JsonPath.array(JsonPath.uuid())
+                )))
+                .resultPath("$.paymentRefundResult")
+                .build();
+
+        // cancel trip task state
+        CallApiGatewayHttpApiEndpoint cancelTripTask = CallApiGatewayHttpApiEndpoint.Builder.create(this, "CancelTripTask")
+                .apiId(proxyApi.getApiId())
+                .apiStack(Stack.of(proxyApi))
+                .method(software.amazon.awscdk.services.stepfunctions.tasks.HttpMethod.POST)
+                .apiPath("/trip/cancel")
+                .authType(AuthType.NO_AUTH)
+                .requestBody(TaskInput.fromObject(Map.of(
+                        "tripId", JsonPath.stringAt("$.tripResult.ResponseBody")
+                )))
+                .headers(TaskInput.fromObject(Map.of(
+                        "Content-Type", List.of("application/json")
+                )))
+                .resultPath("$.cancelTripResult")
+                .build();
+
+        Chain rollbackSteps = Chain.start(refundPaymentTask).next(cancelTripTask);
+
         // trip task state
         CallApiGatewayHttpApiEndpoint createTripTask = CallApiGatewayHttpApiEndpoint.Builder.create(this, "CreateTrip")
                 .apiId(proxyApi.getApiId())
@@ -516,13 +564,18 @@ public class ComputeStack extends Stack {
                         "tripId", JsonPath.stringAt("$.tripResult.ResponseBody"),
                         "cabNo", "RTS-7751",
                         "cabDriver", "Armin Arlet",
-                        "pickupLocation", "Wall Siena"
+                        "pickupLocation", "FAILOVER_TEST"
                 )))
                 .resultPath("$.dispatchResult")
                 .headers(TaskInput.fromObject(Map.of(
                         "Content-Type", List.of("application/json")
                 )))
                 .build();
+
+        createDispatchTask.addCatch(rollbackSteps, CatchProps.builder()
+                .errors(List.of("ApiGateway.503"))
+                .resultPath("$.errorInfo")
+                .build());
 
         // complete trip task
         CallApiGatewayHttpApiEndpoint completeTripTask = CallApiGatewayHttpApiEndpoint.Builder.create(this, "CompleteTrip")
